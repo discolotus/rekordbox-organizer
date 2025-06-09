@@ -33,10 +33,12 @@ class RekordboxOrganizer:
     
     SUPPORTED_FORMATS = {'.mp3', '.flac', '.wav', '.aiff', '.m4a', '.aac', '.ogg'}
     
-    def __init__(self, source_dir: str, target_dir: str, dry_run: bool = True):
+    def __init__(self, source_dir: str, target_dir: str, dry_run: bool = True, safe_mode: bool = False):
         self.source_dir = Path(source_dir)
         self.target_dir = Path(target_dir)
         self.dry_run = dry_run
+        self.safe_mode = safe_mode
+        self.import_dir = self.target_dir / "import" if safe_mode else None
         self.scanner = MusicFileScanner()
         self.rekordbox_db = None
         self.rekordbox_xml = None
@@ -46,6 +48,7 @@ class RekordboxOrganizer:
             'total_files': 0,
             'processed_files': 0,
             'no_date_files': 0,
+            'copied_files': 0,
             'skipped_files': 0,
             'errors': 0,
             'conflicts_resolved': 0
@@ -142,6 +145,34 @@ class RekordboxOrganizer:
                 return new_path
             counter += 1
     
+    def copy_to_import(self, source: Path) -> Optional[Path]:
+        """Copy file to import directory for safe mode. Returns the copied file path."""
+        if not self.safe_mode or not self.import_dir:
+            return source
+
+        try:
+            if self.dry_run:
+                import_path = self.import_dir / source.name
+                print(f"[DRY RUN] Would copy to import: {source} -> {import_path}")
+                return import_path
+
+            # Create import directory if it doesn't exist
+            self.import_dir.mkdir(parents=True, exist_ok=True)
+
+            # Create unique filename in import directory
+            import_path = self.resolve_filename_conflict(self.import_dir / source.name)
+
+            # Copy the file
+            shutil.copy2(str(source), str(import_path))
+            print(f"Copied to import: {source} -> {import_path}")
+            self.stats['copied_files'] += 1
+            return import_path
+
+        except Exception as e:
+            print(f"Error copying {source} to import directory: {e}")
+            self.stats['errors'] += 1
+            return None
+
     def move_file(self, source: Path, target: Path) -> bool:
         """Move file from source to target, creating directories as needed."""
         try:
@@ -170,6 +201,8 @@ class RekordboxOrganizer:
         print("=== Rekordbox Music Organizer ===")
         print(f"Source: {self.source_dir}")
         print(f"Target: {self.target_dir}")
+        if self.safe_mode:
+            print(f"Import: {self.import_dir} (safe mode - files will be copied first)")
         print(f"Mode: {'DRY RUN' if self.dry_run else 'EXECUTE'}")
         print()
         
@@ -193,11 +226,20 @@ class RekordboxOrganizer:
         for i, file_path in enumerate(music_files, 1):
             print(f"Processing {i}/{len(music_files)}: {file_path.name}")
 
-            # Get date added from Rekordbox
+            # In safe mode, first copy to import directory
+            if self.safe_mode:
+                copied_file = self.copy_to_import(file_path)
+                if not copied_file:
+                    continue  # Skip if copy failed
+                source_file = copied_file
+            else:
+                source_file = file_path
+
+            # Get date added from Rekordbox (use original file path for metadata lookup)
             date_added = self.get_date_added(file_path)
 
             # Create target path (handles both dated and no-date files)
-            target_path = self.create_target_path(date_added, file_path)
+            target_path = self.create_target_path(date_added, source_file)
 
             if date_added:
                 print(f"  📅 Date added: {date_added.strftime('%Y-%m-%d')}")
@@ -207,8 +249,8 @@ class RekordboxOrganizer:
                 print(f"  📁 Target: {target_path} (no-date folder)")
                 self.stats['no_date_files'] += 1
 
-            # Move file
-            if self.move_file(file_path, target_path):
+            # Move file (from import directory if safe mode, otherwise from original location)
+            if self.move_file(source_file, target_path):
                 self.stats['processed_files'] += 1
         
         # Print summary
@@ -218,12 +260,17 @@ class RekordboxOrganizer:
         """Print operation summary."""
         print("\n=== Summary ===")
         print(f"Total files found: {self.stats['total_files']}")
+        if self.safe_mode:
+            print(f"Files copied to import: {self.stats['copied_files']}")
         print(f"Files processed: {self.stats['processed_files']}")
         print(f"  - With date metadata: {self.stats['processed_files'] - self.stats['no_date_files']}")
         print(f"  - Without date (moved to no-date): {self.stats['no_date_files']}")
         print(f"Files skipped: {self.stats['skipped_files']}")
         print(f"Conflicts resolved: {self.stats['conflicts_resolved']}")
         print(f"Errors: {self.stats['errors']}")
+        if self.safe_mode and not self.dry_run:
+            print(f"\n💾 Safe mode: Original files preserved in source directory")
+            print(f"📁 Copies organized from: {self.import_dir}")
 
 
 def main():
@@ -233,20 +280,21 @@ def main():
     parser.add_argument("--xml", "-x", help="Path to Rekordbox XML export file (optional)")
     parser.add_argument("--dry-run", action="store_true", default=True, help="Preview changes without executing (default)")
     parser.add_argument("--execute", action="store_true", help="Execute the organization (overrides --dry-run)")
-    
+    parser.add_argument("--safe", action="store_true", help="Safe mode: copy files to import directory first, then organize copies")
+
     args = parser.parse_args()
-    
+
     # Validate directories
     source_dir = Path(args.source)
     if not source_dir.exists():
         print(f"Error: Source directory does not exist: {source_dir}")
         sys.exit(1)
-    
+
     # Determine if this is a dry run
     dry_run = not args.execute
-    
+
     # Create organizer and run
-    organizer = RekordboxOrganizer(args.source, args.target, dry_run=dry_run)
+    organizer = RekordboxOrganizer(args.source, args.target, dry_run=dry_run, safe_mode=args.safe)
     organizer.organize_files(xml_path=args.xml)
 
 

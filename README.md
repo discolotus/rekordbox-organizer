@@ -10,7 +10,8 @@ A Python tool to organize music files based on their Rekordbox "date added" meta
 - 📂 **No-Date Handling**: Files without date metadata go to a `no-date` folder
 - 🔄 **Conflict Resolution**: Handles filename conflicts by appending numbers (`-1`, `-2`, etc.)
 - 👀 **Dry Run Mode**: Preview changes before executing
-- 📊 **Progress Tracking**: Shows detailed progress and statistics
+- � **Safe Mode**: Copy files to import directory first, then organize copies (preserves originals)
+- �📊 **Progress Tracking**: Shows detailed progress and statistics
 
 ## Installation
 
@@ -51,6 +52,9 @@ python rekordbox_organizer.py --source /path/to/music --target /path/to/organize
 # Execute the organization
 python rekordbox_organizer.py --source /path/to/music --target /path/to/organized --execute
 
+# Safe mode: copy files first, then organize copies (preserves originals)
+python rekordbox_organizer.py --source /path/to/music --target /path/to/organized --safe --execute
+
 # Use with Rekordbox XML export
 python rekordbox_organizer.py --source /path/to/music --target /path/to/organized --xml /path/to/rekordbox.xml --execute
 ```
@@ -72,6 +76,9 @@ python music_file_scanner.py /path/to/music --flatten-preview
 
 ```
 target_directory/
+├── import/              # Safe mode: temporary copies (only with --safe)
+│   ├── file1.mp3
+│   └── file2.flac
 ├── 2024-01/
 │   ├── song1.mp3
 │   ├── song2.flac
@@ -118,6 +125,7 @@ target_directory/
 - `--xml, -x`: Path to Rekordbox XML export file (optional)
 - `--dry-run`: Preview changes without executing (default)
 - `--execute`: Execute the organization (overrides --dry-run)
+- `--safe`: Safe mode - copy files to import directory first, then organize copies
 
 ### music_file_scanner.py
 - `directory`: Directory to scan (required)
@@ -152,7 +160,19 @@ python rekordbox_organizer.py \
   --execute
 ```
 
-### Example 3: Analyze Before Organizing
+### Example 3: Safe Mode Organization
+```bash
+# Safe mode: copies files first, then organizes copies (preserves originals)
+python rekordbox_organizer.py --source ~/Music/Unsorted --target ~/Music/Organized --safe --execute
+
+# This creates:
+# ~/Music/Organized/import/     <- temporary copies
+# ~/Music/Organized/2024-01/    <- organized files
+# ~/Music/Organized/no-date/    <- files without metadata
+# Original files remain untouched in ~/Music/Unsorted
+```
+
+### Example 4: Analyze Before Organizing
 ```bash
 # Check what files you have
 python music_file_scanner.py ~/Music/Unsorted --stats
@@ -180,6 +200,7 @@ If you prefer to use an XML export:
 ## Safety Features
 
 - **Dry run by default**: Always previews changes first
+- **Safe mode**: `--safe` option copies files to import directory first, preserving originals
 - **Conflict resolution**: Automatically handles duplicate filenames
 - **Error handling**: Continues processing even if individual files fail
 - **Detailed logging**: Shows exactly what's happening
