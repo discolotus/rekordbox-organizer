@@ -41,6 +41,7 @@ setup(
             "test-rekordbox=test_rekordbox_connection:main",
         ],
     },
+    py_modules=["rekordbox_organizer", "music_file_scanner", "test_rekordbox_connection"],
     keywords="rekordbox music organizer dj audio files metadata",
     project_urls={
         "Bug Reports": "https://github.com/discolotus/rekordbox-organizer/issues",

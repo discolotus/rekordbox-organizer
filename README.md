@@ -15,20 +15,76 @@ A Python tool to organize music files based on their Rekordbox "date added" meta
 
 ## Installation
 
-1. **Clone this repository**:
-   ```bash
-   git clone https://github.com/discolotus/rekordbox-organizer.git
-   cd rekordbox-organizer
-   ```
+### Option 1: Global CLI Installation (Recommended)
 
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+Install globally using pipx for easy command-line access:
 
-3. **Ensure Rekordbox is installed** on your system, or have a Rekordbox XML export file ready.
+```bash
+# Clone the repository
+git clone https://github.com/discolotus/rekordbox-organizer.git
+cd rekordbox-organizer
+
+# Install globally with pipx (recommended)
+make install-cli
+```
+
+This installs three global commands:
+- `rekordbox-organizer` - Main organizer tool
+- `music-scanner` - Music file analysis tool
+- `test-rekordbox` - Test Rekordbox connection
+
+### Option 2: Development Installation
+
+For development or if you prefer pip:
+
+```bash
+# Clone the repository
+git clone https://github.com/discolotus/rekordbox-organizer.git
+cd rekordbox-organizer
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Or install in development mode
+make install-dev
+```
+
+### Requirements
+
+- **Python 3.8+**
+- **pipx** (for global installation): `python -m pip install --user pipx`
+- **Rekordbox** installed on your system, or have a Rekordbox XML export file ready
+
+### Makefile Commands
+
+The project includes a Makefile for easy management:
+
+```bash
+make help           # Show all available commands
+make install-cli    # Install globally with pipx (recommended)
+make install-dev    # Install in development mode
+make uninstall      # Uninstall the package
+make test           # Run basic functionality tests
+make status         # Show installation status
+make clean          # Clean build artifacts
+```
 
 ## Quick Start
+
+After installation with `make install-cli`:
+
+```bash
+# Test your Rekordbox connection first
+test-rekordbox
+
+# Preview organization (dry run - safe)
+rekordbox-organizer --source /path/to/music --target /path/to/organized --dry-run
+
+# Execute the organization
+rekordbox-organizer --source /path/to/music --target /path/to/organized --execute
+```
+
+Or using Python directly (development mode):
 
 ```bash
 # Test your Rekordbox connection first
@@ -45,6 +101,24 @@ python rekordbox_organizer.py --source /path/to/music --target /path/to/organize
 
 ### Basic Commands
 
+**Using CLI commands (after `make install-cli`):**
+
+```bash
+# Dry run (preview only) - DEFAULT MODE
+rekordbox-organizer --source /path/to/music --target /path/to/organized
+
+# Execute the organization
+rekordbox-organizer --source /path/to/music --target /path/to/organized --execute
+
+# Safe mode: copy files first, then organize copies (preserves originals)
+rekordbox-organizer --source /path/to/music --target /path/to/organized --safe --execute
+
+# Use with Rekordbox XML export
+rekordbox-organizer --source /path/to/music --target /path/to/organized --xml /path/to/rekordbox.xml --execute
+```
+
+**Using Python directly:**
+
 ```bash
 # Dry run (preview only) - DEFAULT MODE
 python rekordbox_organizer.py --source /path/to/music --target /path/to/organized
@@ -60,6 +134,21 @@ python rekordbox_organizer.py --source /path/to/music --target /path/to/organize
 ```
 
 ### Music File Scanner (Analysis Tool)
+
+**Using CLI commands:**
+
+```bash
+# Scan directory and show statistics
+music-scanner /path/to/music --stats
+
+# Analyze directory depth structure
+music-scanner /path/to/music --depth-analysis
+
+# Preview filename conflicts if flattened
+music-scanner /path/to/music --flatten-preview
+```
+
+**Using Python directly:**
 
 ```bash
 # Scan directory and show statistics
