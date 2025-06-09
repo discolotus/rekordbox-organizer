@@ -21,6 +21,20 @@ from typing import Dict, List, Optional, Tuple
 try:
     from pyrekordbox import Rekordbox6Database
     from pyrekordbox.rbxml import RekordboxXml
+
+    # Immediately and aggressively disable all pyrekordbox logging after import
+    import logging
+    logging.getLogger("pyrekordbox").disabled = True
+    logging.getLogger("pyrekordbox.db6").disabled = True
+    logging.getLogger("pyrekordbox.db6.database").disabled = True
+    logging.getLogger("pyrekordbox.db6.aux_files").disabled = True
+
+    # Also set levels as backup
+    for logger_name in ["pyrekordbox", "pyrekordbox.db6", "pyrekordbox.db6.database", "pyrekordbox.db6.aux_files"]:
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.CRITICAL + 1)
+        logger.propagate = False
+
 except ImportError:
     print("Error: pyrekordbox not installed. Install with: pip install pyrekordbox")
     sys.exit(1)
