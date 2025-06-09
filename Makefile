@@ -53,7 +53,16 @@ install-cli: check-pipx
 install-dev:
 	@echo "🔧 Installing in development mode..."
 	pip install -e .
+	@echo ""
 	@echo "✅ Development installation complete!"
+	@echo ""
+	@echo "📋 Available commands (editable install):"
+	@echo "  rekordbox-organizer  - Main organizer tool (live updates)"
+	@echo "  music-scanner        - Music file analysis tool (live updates)"
+	@echo "  test-rekordbox       - Test Rekordbox connection (live updates)"
+	@echo ""
+	@echo "🔄 Changes to Python files will be reflected immediately!"
+	@echo "💡 No need to reinstall after code changes"
 
 # Uninstall the package
 uninstall:
