@@ -33,11 +33,12 @@ class RekordboxOrganizer:
     
     SUPPORTED_FORMATS = {'.mp3', '.flac', '.wav', '.aiff', '.m4a', '.aac', '.ogg'}
     
-    def __init__(self, source_dir: str, target_dir: str, dry_run: bool = True, safe_mode: bool = False):
+    def __init__(self, source_dir: str, target_dir: str, dry_run: bool = True, safe_mode: bool = False, update_paths: bool = False):
         self.source_dir = Path(source_dir)
         self.target_dir = Path(target_dir)
         self.dry_run = dry_run
         self.safe_mode = safe_mode
+        self.update_paths = update_paths
         self.import_dir = self.target_dir / "import" if safe_mode else None
         self.scanner = MusicFileScanner()
         self.rekordbox_db = None
@@ -49,6 +50,7 @@ class RekordboxOrganizer:
             'processed_files': 0,
             'no_date_files': 0,
             'copied_files': 0,
+            'path_updates': 0,
             'skipped_files': 0,
             'errors': 0,
             'conflicts_resolved': 0
@@ -173,6 +175,52 @@ class RekordboxOrganizer:
             self.stats['errors'] += 1
             return None
 
+    def update_rekordbox_path(self, original_path: Path, new_path: Path, content_id: Optional[str] = None) -> bool:
+        """Update the file path in Rekordbox database after moving a file."""
+        if not self.update_paths or not self.rekordbox_db:
+            return True  # Skip if path updates disabled or no database connection
+
+        try:
+            if self.dry_run:
+                print(f"[DRY RUN] Would update Rekordbox path: {original_path} -> {new_path}")
+                return True
+
+            # Find the content entry by original path or content ID
+            if content_id:
+                # Get content by ID if we have it
+                contents = self.rekordbox_db.get_content()
+                content = None
+                for c in contents:
+                    if c.ID == content_id:
+                        content = c
+                        break
+            else:
+                # Find content by original file path
+                contents = self.rekordbox_db.get_content()
+                content = None
+                original_path_str = str(original_path)
+
+                for c in contents:
+                    if c.FolderPath and (c.FolderPath == original_path_str or c.FolderPath.endswith(original_path.name)):
+                        content = c
+                        break
+
+            if not content:
+                print(f"  ⚠️  Content not found in Rekordbox database for: {original_path}")
+                return False
+
+            # Update the path in Rekordbox database
+            print(f"  🔄 Updating Rekordbox path: {content.FolderPath} -> {new_path}")
+            self.rekordbox_db.update_content_path(content, str(new_path), commit=True, check_path=False)
+            self.stats['path_updates'] += 1
+            print(f"  ✅ Rekordbox path updated successfully")
+            return True
+
+        except Exception as e:
+            print(f"  ❌ Error updating Rekordbox path: {e}")
+            self.stats['errors'] += 1
+            return False
+
     def move_file(self, source: Path, target: Path) -> bool:
         """Move file from source to target, creating directories as needed."""
         try:
@@ -203,6 +251,8 @@ class RekordboxOrganizer:
         print(f"Target: {self.target_dir}")
         if self.safe_mode:
             print(f"Import: {self.import_dir} (safe mode - files will be copied first)")
+        if self.update_paths:
+            print(f"Path Updates: Enabled (will update Rekordbox database)")
         print(f"Mode: {'DRY RUN' if self.dry_run else 'EXECUTE'}")
         print()
         
@@ -252,6 +302,11 @@ class RekordboxOrganizer:
             # Move file (from import directory if safe mode, otherwise from original location)
             if self.move_file(source_file, target_path):
                 self.stats['processed_files'] += 1
+
+                # Update Rekordbox database path if requested
+                if self.update_paths and not self.safe_mode:
+                    # Only update paths for direct moves (not safe mode copies)
+                    self.update_rekordbox_path(file_path, target_path)
         
         # Print summary
         self.print_summary()
@@ -265,12 +320,16 @@ class RekordboxOrganizer:
         print(f"Files processed: {self.stats['processed_files']}")
         print(f"  - With date metadata: {self.stats['processed_files'] - self.stats['no_date_files']}")
         print(f"  - Without date (moved to no-date): {self.stats['no_date_files']}")
+        if self.update_paths:
+            print(f"Rekordbox paths updated: {self.stats['path_updates']}")
         print(f"Files skipped: {self.stats['skipped_files']}")
         print(f"Conflicts resolved: {self.stats['conflicts_resolved']}")
         print(f"Errors: {self.stats['errors']}")
         if self.safe_mode and not self.dry_run:
             print(f"\n💾 Safe mode: Original files preserved in source directory")
             print(f"📁 Copies organized from: {self.import_dir}")
+        if self.update_paths and not self.dry_run:
+            print(f"\n🔄 Path updates: Rekordbox database updated with new file locations")
 
 
 def main():
@@ -294,8 +353,14 @@ def main():
     # Determine if this is a dry run
     dry_run = not args.execute
 
+    # Validate argument combinations
+    if args.safe and args.update_paths:
+        print("Warning: --update-paths is not compatible with --safe mode.")
+        print("Safe mode copies files, so original paths remain unchanged.")
+        print("Path updates will be skipped.")
+
     # Create organizer and run
-    organizer = RekordboxOrganizer(args.source, args.target, dry_run=dry_run, safe_mode=args.safe)
+    organizer = RekordboxOrganizer(args.source, args.target, dry_run=dry_run, safe_mode=args.safe, update_paths=args.update_paths)
     organizer.organize_files(xml_path=args.xml)
 
 

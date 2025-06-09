@@ -281,7 +281,6 @@ def main():
     parser.add_argument("--dry-run", action="store_true", default=True, help="Preview changes without executing (default)")
     parser.add_argument("--execute", action="store_true", help="Execute the organization (overrides --dry-run)")
     parser.add_argument("--safe", action="store_true", help="Safe mode: copy files to import directory first, then organize copies")
-    parser.add_argument("--update-paths", action="store_true", help="Update file paths in Rekordbox database after moving files")
 
     args = parser.parse_args()
 
