@@ -113,6 +113,9 @@ rekordbox-organizer --source /path/to/music --target /path/to/organized --execut
 # Safe mode: copy files first, then organize copies (preserves originals)
 rekordbox-organizer --source /path/to/music --target /path/to/organized --safe --execute
 
+# Update Rekordbox database paths after moving files (keeps Rekordbox in sync)
+rekordbox-organizer --source /path/to/music --target /path/to/organized --update-paths --execute
+
 # Use with Rekordbox XML export
 rekordbox-organizer --source /path/to/music --target /path/to/organized --xml /path/to/rekordbox.xml --execute
 ```
@@ -128,6 +131,9 @@ python rekordbox_organizer.py --source /path/to/music --target /path/to/organize
 
 # Safe mode: copy files first, then organize copies (preserves originals)
 python rekordbox_organizer.py --source /path/to/music --target /path/to/organized --safe --execute
+
+# Update Rekordbox database paths after moving files (keeps Rekordbox in sync)
+python rekordbox_organizer.py --source /path/to/music --target /path/to/organized --update-paths --execute
 
 # Use with Rekordbox XML export
 python rekordbox_organizer.py --source /path/to/music --target /path/to/organized --xml /path/to/rekordbox.xml --execute
@@ -215,6 +221,7 @@ target_directory/
 - `--dry-run`: Preview changes without executing (default)
 - `--execute`: Execute the organization (overrides --dry-run)
 - `--safe`: Safe mode - copy files to import directory first, then organize copies
+- `--update-paths`: Update file paths in Rekordbox database after moving files
 
 ### music_file_scanner.py
 - `directory`: Directory to scan (required)
@@ -261,7 +268,21 @@ python rekordbox_organizer.py --source ~/Music/Unsorted --target ~/Music/Organiz
 # Original files remain untouched in ~/Music/Unsorted
 ```
 
-### Example 4: Analyze Before Organizing
+### Example 4: Update Rekordbox Database Paths
+```bash
+# Organize files AND update Rekordbox database paths (keeps Rekordbox in sync)
+python rekordbox_organizer.py --source ~/Music/Unsorted --target ~/Music/Organized --update-paths --execute
+
+# This will:
+# 1. Move files to organized folders (2024-01/, 2024-02/, etc.)
+# 2. Update Rekordbox database with new file paths
+# 3. Update ANLZ analysis files with new paths
+# 4. Keep all metadata, cues, and loops intact
+
+# Note: --update-paths is NOT compatible with --safe mode
+```
+
+### Example 5: Analyze Before Organizing
 ```bash
 # Check what files you have
 python music_file_scanner.py ~/Music/Unsorted --stats
@@ -290,6 +311,7 @@ If you prefer to use an XML export:
 
 - **Dry run by default**: Always previews changes first
 - **Safe mode**: `--safe` option copies files to import directory first, preserving originals
+- **Database path updates**: `--update-paths` keeps Rekordbox in sync with organized files
 - **Conflict resolution**: Automatically handles duplicate filenames
 - **Error handling**: Continues processing even if individual files fail
 - **Detailed logging**: Shows exactly what's happening
